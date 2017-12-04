@@ -1,0 +1,91 @@
+<html>
+	<head>
+		<title>helloworld</title>
+		<script type="text/javascript">
+			function helloworld() {
+				document.getElementById("d1");
+				document.getElementsByTagName("div")
+				var list = document.getElementsByClassName("btn")
+//				alert(list[0].type)
+				var json = {"test":{"test_key":"test_value"}}
+//				alert(json.test.test_key)
+
+				var person = {};
+				(function (p) {
+					p.setName = function(name) {
+						this.name = name;
+					}
+					p.getName = function() {
+						return this.name;
+					}
+				})(person);
+				(function (p) {
+					p.friend = {
+						setName: function(name) {
+							this.name = name;
+						},
+						getName: function() {
+							return this.name;
+						}
+					}
+				})(person);
+				person.setName("guoyi");
+				person.friend.setName("jjj");
+				alert(person.friend.getName()+ person.getName());
+				
+				var request = new XMLHttpRequest();
+				request.onreadystatechange = function() {
+					switch (request.readyState){
+						case 0:
+							alert("0");
+							break;
+						case 1:
+							alert("1");
+							break;
+						case 2:
+							alert("2");
+							break;
+						case 3:
+							alert("3");
+							break;
+						case 4:
+							if (request.status==200) {
+								alert("success" + request.responseText);
+							} else{
+								alert("failure" + request.status + request.body);
+							}
+							break;
+						default:
+							break;
+					}
+				}
+				request.open("GET","http://github.com");
+				request.send();
+			}
+		</script>
+		<style type="text/css">
+			.classA{
+				font: "微软雅黑";
+			}
+		</style>
+	</head>
+	<body>
+		<div id="d1">
+			
+		</div>
+		<div class="classA">
+			helloworld
+		</div>
+	</body>
+	<div id="page">
+		<div class="logo"></div>
+		<ul id="navigation">
+			<li><a href=""></a></li>
+			<li><a href=""></a></li>
+		</ul>
+		<ul>
+			<li><a href=""></a></li>
+		</ul>
+	</div>
+	<input type="button" class="btn" name="" id="" value="click me" onclick="helloworld()" />
+</html>

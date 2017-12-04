@@ -2,32 +2,46 @@ import PerfectLib
 import PerfectHTTP
 import PerfectHTTPServer
 
-// User Server
-let userServer = HTTPServer()
-var userRoutes = Routes()
-userRoutes.add(method: .get, uri: "/", handler: { request, response in
-						print("hello api")
-						response.appendBody(string: "hello world")
-						response.completed()
-						})
-userServer.addRoutes(userRoutes)
-userServer.serverPort = 8080
-userServer.documentRoot = "./webroot/"
+func localhostHandler(data: [String: Any]) throws -> RequestHandler {
+	return {
+		request, response in
+		response.appendBody(string: "hello world")
+		response.completed()
+	}
+}
 
-let chatServer = HTTPServer()
-var chatRoutes = Routes()
-chatRoutes.add(method: .get, uri: "/", handler: { request, response in
-						print("hello chat")
-						response.appendBody(string: "hello chat")
-						response.completed()
-						})
-chatServer.addRoutes(chatRoutes)
-chatServer.serverPort = 8181
-chatServer.documentRoot = "./webroot/"
+func gameHandler(data: [String: Any]) throws -> RequestHandler {
+	return {
+		request, response in
+		let path = request.documentRoot + "/game"
+		debugPrint("game path = \(path)")
+		StaticFileHandler(documentRoot: path).handleRequest(request: request, response: response)
+	}
+}
+
+let confData = [
+	"servers":[
+		[
+			"name": "Powwow-Server",
+			"port": 8080,
+			"routes": [
+				["method": "get", "uri": "/", "handler": localhostHandler],
+				["method": "get", "uri": "/game", "handler": gameHandler],
+				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": "./webroot", "allowResponseFilters": true]
+			],
+			"filters": [
+				[
+					"type": "response",
+					"priority": "high",
+					"name": PerfectHTTPServer.HTTPFilter.contentCompression
+				]
+			]
+		]
+	]
+]
 
 do {
-    try userServer.start()
-    try chatServer.start()
+	try HTTPServer.launch(configurationData: confData)
 } catch {
-    fatalError("\(error)")
+	fatalError("\(error)")
 }
