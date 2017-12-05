@@ -13,9 +13,8 @@ func localhostHandler(data: [String: Any]) throws -> RequestHandler {
 func gameHandler(data: [String: Any]) throws -> RequestHandler {
 	return {
 		request, response in
-		let path = request.documentRoot + "/game"
-		debugPrint("game path = \(path)")
-		StaticFileHandler(documentRoot: path).handleRequest(request: request, response: response)
+		response.appendBody(string: "yo yo pow wow")
+		response.completed()
 	}
 }
 
@@ -26,8 +25,8 @@ let confData = [
 			"port": 8080,
 			"routes": [
 				["method": "get", "uri": "/", "handler": localhostHandler],
-				["method": "get", "uri": "/game", "handler": gameHandler],
-				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": "./webroot", "allowResponseFilters": true]
+				["method": "get", "uri": "/gameStart", "handler": gameHandler],
+				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": ".", "allowResponseFilters": true]
 			],
 			"filters": [
 				[
