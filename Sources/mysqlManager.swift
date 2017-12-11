@@ -5,6 +5,7 @@
 //  Created by kokozu on 06/12/2017.
 //
 import PerfectMySQL
+import PerfectLib
 
 class mysqlManager {
     static let instance = mysqlManager()
@@ -19,10 +20,10 @@ class mysqlManager {
     fileprivate var _isConnect = false
     
     init() {
-        guard connect() else {
-            debugPrint("mysql connect failure")
-            return
-        }
+//        guard connect() else {
+//            debugPrint("mysql connect failure")
+//            return
+//        }
     }
     
     deinit {
@@ -40,15 +41,27 @@ class mysqlManager {
     }
 }
 
+// MARK: - Private - Methods
+extension mysqlManager {
+    /// 根据手机号生成token 添加了时间戳在里面
+    func tokenMaker(mobile: String) -> String {
+        let currentDateStr = String(getNow())
+        let tokenStr = mobile + currentDateStr
+        var token = ""
+        if let tokenMD5 = tokenStr.digest(.md5)?.encode(.hex) {
+            token = String(validatingUTF8: tokenMD5) ?? ""
+        }
+        return token
+    }
+}
+
 // MARK: - Public - Methods
 extension mysqlManager {
     /// 查找用户手机号是否存在
     func queryUser(mobile: String) -> (success: Bool, userDic: [String: String]) {
-        if !_isConnect {
-            guard connect() else {
-                debugPrint("connect db failure again")
-                return (false, [:])
-            }
+        if !judgeConnect() {
+            debugPrint("connect db failure again")
+            return (false, [:])
         }
         let result = query(tableName: "user", find: "*", whereStr: "mobile=\(mobile)")
         if result.success {
@@ -77,22 +90,72 @@ extension mysqlManager {
             return (false, [:])
         }
     }
+    
+    /// 更新本地token 返回登录是否成功
+    func updateToken(mobile: String, password: String) -> (success: Bool, token: String) {
+        if !judgeConnect() {
+            debugPrint("connect db failure again")
+            return (false, "")
+        }
+        
+        let result = query(tableName: "user", find: "count(id)", whereStr: "mobile='\(mobile)' and password='\(password)'")
+        if result.success {
+            guard let sqlResult = result.mysqlResult else {
+                debugPrint("update token failure")
+                return (false, "")
+            }
+            var isExist = false
+            sqlResult.forEachRow(callback: { (element) in
+                debugPrint(element.count)
+                if element.count > 0 {
+                    isExist = true
+                }
+            })
+            
+            //  手机号 密码 验证完毕 更新本地的token
+            if isExist {
+                let token = tokenMaker(mobile: mobile)
+                if token.count > 0 {
+                    let tokenResult = update(tableName: "user", para: ["token": token], whereDic: ["mobile": mobile])
+                    if tokenResult.success {
+                        return (true, token)
+                    }
+                }
+            }
+        }
+        return (false, "")
+    }
 }
 
 // MARK: - Base - Methods
 extension mysqlManager {
+    
+    /// 判断是否已经连接服务器
+    func judgeConnect() -> Bool {
+        if !_isConnect {
+            return connect()
+        }
+        return true
+    }
+    
+    
     func mysqlStatement(sql: String) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
         guard _mysql.selectDatabase(named: DBName) else {
-            return (false, nil, "select database failure")
+            let msg = "select database failure \(sql)"
+            debugPrint(msg)
+            return (false, nil, msg)
         }
         
         guard _mysql.query(statement: sql) else {
-            return (false, nil, "sql query failure \(sql)")
+            let msg = "sql query failure \(sql)"
+            debugPrint(msg)
+            return (false, nil, msg)
         }
         
         guard let result = _mysql.storeResults() else {
-            return (false, nil, "query failure empty result")
-            
+            let msg = "query failure empty result \(sql)"
+            debugPrint(msg)
+            return (false, nil, msg)
         }
         
         return (true, result, "\(sql) success")
@@ -102,12 +165,12 @@ extension mysqlManager {
         var left = "insert into \(tableName) ("
         var right = "values("
         
-        var frist = true
+        var first = true
         para.forEach { (dic) in
-            if frist {
+            if first {
                 left.append(dic.key)
                 right.append(dic.value)
-                frist = false
+                first = false
             } else {
                 left.append(", \(dic.key)")
                 right.append(", \(dic.value)")
@@ -123,6 +186,33 @@ extension mysqlManager {
     func query(tableName: String, find: String, whereStr: String) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
         let _find = find.count > 0 ? find : "*"
         let sqlStr = "select \(_find) from \(tableName) where \(whereStr)"
+        return mysqlStatement(sql: sqlStr)
+    }
+    
+    func update(tableName: String, para: [String: String], whereDic: [String: String]) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
+        var left: String = "update \(tableName) set "
+        var right: String = ""
+        
+        var first = true
+        para.forEach { (element) in
+            if first {
+                first = false
+                left.append("\(element.key) = '\(element.value)'")
+            } else {
+                left.append(", \(element.key) = '\(element.value)'")
+            }
+        }
+        
+        first = true
+        whereDic.forEach { (element) in
+            if first {
+                first = false
+                right.append("where \(element.key) = '\(element.value)'")
+            } else {
+                right.append(", \(element.key) = '\(element.value)'")
+            }
+        }
+        let sqlStr = left + right
         return mysqlStatement(sql: sqlStr)
     }
 }

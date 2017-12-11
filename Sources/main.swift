@@ -10,21 +10,36 @@ func localhostHandler(data: [String: Any]) throws -> RequestHandler {
 	}
 }
 
+/// 登录、注册
 func gameHandler(data: [String: Any]) throws -> RequestHandler {
 	return {
 		request, response in
         
-        let result = mysqlManager.instance.queryUser(mobile: "13800138000")
+        let paraDic = analysisRequest(para: request.params())
+        
+        debugPrint(paraDic)
+        
+        let mobileFromUser = paraDic["mobile"] ?? ""
+        let passwordFormUser = paraDic["password"] ?? ""
+        //  判断参数是否齐全
+        if mobileFromUser.count == 0 || passwordFormUser.count == 0 {
+            response.appendBody(string: "error")
+            response.completed()
+            return
+        }
+        
+        var responseBodyDic: [String: String] = [:]
+        
+        var token: String?
+
+        let result = mysqlManager.instance.queryUser(mobile: mobileFromUser)
         if result.success && result.userDic.count > 0 {
             //  存在这个用户手机号 生成token 保存本地 返回token
-            var token = ""
-            if let mobile = result.userDic["mobile"] {
-                debugPrint("mobile=\(mobile)")
-                if let enc = mobile.digest(.md5)?.encode(.hex) {
-                    token = String(validatingUTF8: enc) ?? ""
-                }
+            //  更新到本地   内部验证密码正伪
+            let tokenResult = mysqlManager.instance.updateToken(mobile: mobileFromUser, password: passwordFormUser)
+            if tokenResult.success {
+                token = tokenResult.token
             }
-            debugPrint(token)
         } else if (result.success && result.userDic.count == 0) {
             //  不存在这个手机号， 生成token，保存token和用户信息 返回token
             
@@ -34,10 +49,41 @@ func gameHandler(data: [String: Any]) throws -> RequestHandler {
         }
         
         
-		response.appendBody(string: "yo yo pow wow")
+        if token != nil {
+            responseBodyDic["code"] = "0"
+            responseBodyDic["token"] = token
+        } else {
+            responseBodyDic["code"] = "1"
+            responseBodyDic["message"] = "token 失效"
+        }
+        
+        var responseJSON = ""
+        do {
+            responseJSON = try responseBodyDic.jsonEncodedString()
+        } catch {
+            debugPrint("\(error)")
+            responseJSON = "error"
+        }
+        
+        response.setHeader(.contentType, value: "text/html; charset=utf-8")
+        response.appendBody(string: responseJSON)
+        
 		response.completed()
 	}
 }
+
+//MARK: Instrument Methods
+
+/// 解析参数 返回字典
+func analysisRequest(para:[(String, String)]) -> [String: String] {
+    var resultDic: [String: String] = [:]
+    para.forEach { (element) in
+        resultDic[element.0] = element.1
+    }
+    return resultDic
+}
+
+//MARK: Server Config
 
 let confData = [
 	"servers":[
