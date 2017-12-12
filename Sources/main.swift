@@ -17,8 +17,6 @@ func gameHandler(data: [String: Any]) throws -> RequestHandler {
         
         let paraDic = analysisRequest(para: request.params())
         
-        debugPrint(paraDic)
-        
         let mobileFromUser = paraDic["mobile"] ?? ""
         let passwordFormUser = paraDic["password"] ?? ""
         //  判断参数是否齐全
@@ -28,21 +26,29 @@ func gameHandler(data: [String: Any]) throws -> RequestHandler {
             return
         }
         
-        var responseBodyDic: [String: String] = [:]
+        var responseBodyDic: [String: Any] = [:]
         
         var token: String?
 
         let result = mysqlManager.instance.queryUser(mobile: mobileFromUser)
+        /// 缓存用户数据
+        var userInfo: [String: String] = result.userDic
+        
         if result.success && result.userDic.count > 0 {
             //  存在这个用户手机号 生成token 保存本地 返回token
             //  更新到本地   内部验证密码正伪
             let tokenResult = mysqlManager.instance.updateToken(mobile: mobileFromUser, password: passwordFormUser)
             if tokenResult.success {
                 token = tokenResult.token
+                userInfo["token"] = tokenResult.token
             }
         } else if (result.success && result.userDic.count == 0) {
             //  不存在这个手机号， 生成token，保存token和用户信息 返回token
-            
+            let newUserResult = mysqlManager.instance.addUser(mobile: mobileFromUser, password: passwordFormUser)
+            if newUserResult.success {
+                userInfo = newUserResult.user
+                token = newUserResult.user["token"]
+            }
         } else {
             //  查询出错
             
@@ -51,10 +57,11 @@ func gameHandler(data: [String: Any]) throws -> RequestHandler {
         
         if token != nil {
             responseBodyDic["code"] = "0"
-            responseBodyDic["token"] = token
+            responseBodyDic["user"] = userInfo
+            responseBodyDic["message"] = "ok"
         } else {
             responseBodyDic["code"] = "1"
-            responseBodyDic["message"] = "token 失效"
+            responseBodyDic["message"] = "token 获取失败"
         }
         
         var responseJSON = ""

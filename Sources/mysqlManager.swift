@@ -106,7 +106,6 @@ extension mysqlManager {
             }
             var isExist = false
             sqlResult.forEachRow(callback: { (element) in
-                debugPrint(element.count)
                 if element.count > 0 {
                     isExist = true
                 }
@@ -125,6 +124,64 @@ extension mysqlManager {
         }
         return (false, "")
     }
+    
+    /// 生成新用户
+    func addUser(mobile: String, password: String) -> (success: Bool, user: [String: String]) {
+        if !judgeConnect() {
+            debugPrint("connect db failure")
+            return (false, [:])
+        }
+        
+        var creatTime = ""
+        do {
+            let creatTimeDouble = getNow()
+            creatTime = try formatDate(creatTimeDouble, format: "%F %R")
+        } catch {
+            debugPrint("\(error)")
+        }
+        
+        //  maxId
+        let maxIdResult = queryMaxId()
+        guard maxIdResult.success else {
+            debugPrint("query max id failure")
+            return (false, [:])
+        }
+        
+        let userInfo = ["mobile": mobile,
+                        "password": password,
+                        "name": "defult",
+                        "token": tokenMaker(mobile: mobile),
+                        "creatTime": creatTime,
+                        "id": maxIdResult.maxId]
+        
+        if insert(tableName: "user", para: userInfo).success {
+            return (true, userInfo)
+        }
+        
+        return (false, [:])
+    }
+    
+    /// 获取所有用户的最大id
+    func queryMaxId() -> (success: Bool, maxId: String) {
+        let result = query(tableName: "user", find: "max(id)")
+        if result.success {
+            guard let mysqlResult = result.mysqlResult else {
+                return (false, "")
+            }
+            
+            var maxId: String = ""
+            mysqlResult.forEachRow(callback: { (element) in
+                if let str = element.first as? String {
+                    maxId = String(Int(str)! + 1)
+                }
+            })
+            
+            if maxId.count > 1 {
+                return (true, maxId)
+            }
+        }
+        return (false, "")
+    }
 }
 
 // MARK: - Base - Methods
@@ -139,7 +196,7 @@ extension mysqlManager {
     }
     
     
-    func mysqlStatement(sql: String) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
+    func mysqlStatement(sql: String, needResult: Bool) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
         guard _mysql.selectDatabase(named: DBName) else {
             let msg = "select database failure \(sql)"
             debugPrint(msg)
@@ -150,6 +207,11 @@ extension mysqlManager {
             let msg = "sql query failure \(sql)"
             debugPrint(msg)
             return (false, nil, msg)
+        }
+        
+        //  走到这里 无返回值的sql就已经完成，无需查询返回值
+        if needResult == false {
+            return (true, nil, "")
         }
         
         guard let result = _mysql.storeResults() else {
@@ -169,24 +231,30 @@ extension mysqlManager {
         para.forEach { (dic) in
             if first {
                 left.append(dic.key)
-                right.append(dic.value)
+                right.append("'\(dic.value)'")
                 first = false
             } else {
                 left.append(", \(dic.key)")
-                right.append(", \(dic.value)")
+                right.append(", '\(dic.value)'")
             }
         }
         left.append(") ")
         right.append(")")
         let sqlStr = left + right
         
-        return mysqlStatement(sql: sqlStr)
+        return mysqlStatement(sql: sqlStr, needResult: false)
     }
     
-    func query(tableName: String, find: String, whereStr: String) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
+    func query(tableName: String, find: String, whereStr: String? = nil) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
         let _find = find.count > 0 ? find : "*"
-        let sqlStr = "select \(_find) from \(tableName) where \(whereStr)"
-        return mysqlStatement(sql: sqlStr)
+        
+        var sqlStr = "select \(_find) from \(tableName)"
+        
+        if let whereStr_n = whereStr {
+            sqlStr = "select \(_find) from \(tableName) where \(whereStr_n)"
+        }
+        
+        return mysqlStatement(sql: sqlStr, needResult: true)
     }
     
     func update(tableName: String, para: [String: String], whereDic: [String: String]) -> (success: Bool, mysqlResult: MySQL.Results?, errorMsg: String) {
@@ -213,6 +281,6 @@ extension mysqlManager {
             }
         }
         let sqlStr = left + right
-        return mysqlStatement(sql: sqlStr)
+        return mysqlStatement(sql: sqlStr, needResult: false)
     }
 }
