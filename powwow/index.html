@@ -10,10 +10,11 @@
 			var request = new XMLHttpRequest()
 			request.onreadystatechange = function() {
 				if (request.readyState == 4 && request.status == 200) {
-					document.getElementById("stateLabel").innerHTML = request.responseText;
+					alert(request.responseText);
+					document.getElementById("submitBtn").innerHTML = request.responseText;
 				}
 			}
-			request.open("GET", "/gameStart");
+			request.open("GET", "/gameStart?mobile=13800138000&password=abcde");
 			request.send();
 		}
 	
@@ -155,7 +156,8 @@
 				</div>
 				<!--登录按钮-->
 				<div class="loginButton">
-					<a href="gameStart" class="submit" style="color: #FFFFFF;">登录</a>
+					<!--<a href="gameStart" class="submit" style="color: #FFFFFF;">登录</a>-->
+					<input type="button" id="submitBtn" name="登录" class="submit" style="color: #FFFFFF" onclick="gameStart()" value="登录" />
 				</div>
 			</form>
 		</div>   

@@ -98,9 +98,9 @@ let confData = [
 			"name": "Powwow-Server",
 			"port": 8080,
 			"routes": [
-				["method": "get", "uri": "/", "handler": localhostHandler],
+//                ["method": "get", "uri": "/", "handler": localhostHandler],
 				["method": "get", "uri": "/gameStart", "handler": gameHandler],
-				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": ".", "allowResponseFilters": true]
+				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": "./powwow", "allowResponseFilters": true]
 			],
 			"filters": [
 				[
