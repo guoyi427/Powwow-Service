@@ -106,8 +106,10 @@ extension mysqlManager {
             }
             var isExist = false
             sqlResult.forEachRow(callback: { (element) in
-                if element.count > 0 {
-                    isExist = true
+                if let count = element.first as? String {
+                    if Int(count) ?? 0 > 0 {
+                        isExist = true
+                    }
                 }
             })
             

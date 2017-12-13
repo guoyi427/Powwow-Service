@@ -79,6 +79,23 @@ func gameHandler(data: [String: Any]) throws -> RequestHandler {
 	}
 }
 
+func queryRoomList(data: [String: Any]) throws -> RequestHandler {
+    return {
+        request, response in
+        
+        let responseDic: [String: Any] = ["code": 0,
+                                          "message": "ok",
+                                          "list":["1","2","3"]]
+        
+        do {
+            let responseStr = try responseDic.jsonEncodedString()
+            response.appendBody(string: responseStr)
+        } catch {
+            debugPrint("\(error)")
+        }
+        response.completed()
+    }
+}
 //MARK: Instrument Methods
 
 /// 解析参数 返回字典
@@ -100,6 +117,7 @@ let confData = [
 			"routes": [
 //                ["method": "get", "uri": "/", "handler": localhostHandler],
 				["method": "get", "uri": "/gameStart", "handler": gameHandler],
+                ["method": "get", "uri": "/roomList", "handler": queryRoomList],
 				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": "./powwow", "allowResponseFilters": true]
 			],
 			"filters": [
