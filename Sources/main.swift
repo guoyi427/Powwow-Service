@@ -118,6 +118,7 @@ let confData = [
 //                ["method": "get", "uri": "/", "handler": localhostHandler],
 				["method": "get", "uri": "/gameStart", "handler": gameHandler],
                 ["method": "get", "uri": "/roomList", "handler": queryRoomList],
+                ["method": "get", "uri": "/chat", "handler": socketHandler],
 				["method": "get", "uri": "/**", "handler": PerfectHTTPServer.HTTPHandler.staticFiles, "documentRoot": "./powwow", "allowResponseFilters": true]
 			],
 			"filters": [

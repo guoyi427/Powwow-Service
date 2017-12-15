@@ -29,6 +29,21 @@
 				}
 				roomListReq.open("GET", "/roomList")
 				roomListReq.send()
+				
+				
+				//	socket
+				var socket = new WebSocket("ws://localhost:8080/chat", ["powwow"])
+				socket.onopen = function() {
+					
+					alert("socket send message"+ socket.readyState)
+				}
+				socket.onmessage = function(evt) {
+					var received_msg = evt.data
+					alert("received message = " + received_msg)
+				}
+				socket.onclose = function(){
+					alert("socket close")
+				}
 			}
 		</script>
 		<style type="text/css">
